@@ -12,7 +12,7 @@ import altair as alt
 st.set_page_config(page_title="PrithviSense", layout="wide")
 
 # --------------------------
-# UI Styling
+# UI Styling (with hover effects)
 # --------------------------
 st.markdown("""
 <style>
@@ -36,23 +36,35 @@ st.markdown("""
 /* Tagline */
 p.tagline { font-size:20px; font-style:italic; color:#225b44; margin-top:-12px; }
 
-/* Card */
+/* Card UI */
 .card {
-    background: rgba(255,255,255,0.78);
+    background: rgba(255,255,255,0.80);
     padding: 24px;
     border-radius: 14px;
-    box-shadow: 0px 6px 22px rgba(0,0,0,0.10);
+    box-shadow: 0px 6px 20px rgba(0,0,0,0.10);
     backdrop-filter: blur(12px);
     margin-bottom: 22px;
-    transition: 0.28s ease;
+    transition: 0.3s ease;
 }
-.card:hover { transform: translateY(-4px); }
+.card:hover { transform: translateY(-5px) scale(1.01); }
 
 /* Buttons */
-.stButton>button { border-radius: 8px; font-weight:600; padding:6px 16px; }
+.stButton>button {
+    border-radius: 8px;
+    font-weight:600;
+    padding:6px 16px;
+    transition:0.25s;
+}
+.stButton>button:hover {
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+    transform: translateY(-2px);
+}
 
-/* Table font */
-.dataframe { font-size: 14px; }
+/* Table hover highlight */
+.dataframe tbody tr:hover {
+    background-color: #e7f5ef !important;
+    cursor: pointer;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,19 +170,15 @@ if st.button("Predict"):
         temp_pred = round(base.temp + np.random.randn(),1)
         uv_pred = round(base.uv + np.random.randn()*0.3,1)
 
-    # Show predicted values
     st.success(f"🌡 Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
 
-    # --------------------------
-    # UV SAFETY ALERT
-    # --------------------------
+    # UV Safety Message
     if uv_pred <= 2.5:
         st.success("✅ UV Level Safe — Outdoor activities are okay.")
     else:
         st.error("⚠ UV Level High — Avoid direct sunlight, stay shaded, hydrate well.")
 
 st.markdown("</div>", unsafe_allow_html=True)
-
 
 # --------------------------
 # 4) ROI Calculator
@@ -194,4 +202,3 @@ st.markdown("</div>", unsafe_allow_html=True)
 # Footer
 # --------------------------
 st.markdown("<p class='center-text' style='color:#445;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
-
