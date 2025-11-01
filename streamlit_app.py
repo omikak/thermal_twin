@@ -14,58 +14,43 @@ import io
 st.set_page_config(page_title="PrithviSense", layout="wide")
 
 # --------------------------
-# Background Style
+# UI Styling
 # --------------------------
 st.markdown("""
 <style>
-:root{
-  --sea1: #e9f5f1;
-  --sea2: #d2efe6;
-  --card-bg: rgba(255,255,255,0.82);
-}
-
-/* ----- Page Background (Sea Green Gradient) ----- */
-body {
-    background: linear-gradient(135deg, var(--sea1), var(--sea2)) fixed !important;
-    background-size: cover;
-    margin: 0;
-}
-
-/* Subtle frosted effect to center content */
-.reportview-container .main .block-container {
-    backdrop-filter: blur(10px) brightness(1.08);
-    padding-top: 12px;
-}
-
-/* ----- Card Styling (Clean + Soft) ----- */
-.card {
-    background: var(--card-bg);
-    padding: 22px;
-    border-radius: 14px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.09);
-    transition: 0.3s ease;
-}
-.card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
-}
-
-/* Center text utility */
-.center-text {
-    text-align: center;
-}
-
-/* Smooth headings */
-h1, h2, h3, .stSubheader {
+.stApp {
+    background: linear-gradient(135deg, #e8f7f0, #cfeee3) !important;
+    background-attachment: fixed;
     font-family: 'Segoe UI', sans-serif;
-    letter-spacing: 0.4px;
 }
+
+/* Center heading */
+.center-text { text-align:center; }
+
+/* Card UI */
+.card {
+    background: rgba(255,255,255,0.85);
+    padding: 24px;
+    border-radius: 14px;
+    box-shadow: 0px 4px 18px rgba(0,0,0,0.08);
+    margin-bottom: 18px;
+    backdrop-filter: blur(12px);
+}
+
+/* Subtle hover lift */
+.card:hover { transform: translateY(-3px); transition: 0.25s ease; }
+
+/* Buttons */
+.stButton>button { border-radius: 8px; font-weight:600; }
+
+/* Header text spacing */
+h1 { font-size: 48px; margin-bottom: 4px; }
+p.tagline { font-size:20px; font-style:italic; color:#3b6652; margin-top:-10px; }
 </style>
 """, unsafe_allow_html=True)
 
-
 # --------------------------
-# Constants
+# Data Load
 # --------------------------
 DATA_FILE = "thermal_data.csv"
 MODEL_FILE = "thermal_model.joblib"
@@ -76,15 +61,11 @@ ZONES = [
     "Sports Stadium", "Central Library", "Green Quad", "Food Court"
 ]
 
-# --------------------------
-# Load Data or Generate Demo
-# --------------------------
 def load_data():
     try:
         df = pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
         return df
     except:
-        # Generate sample data for UI
         now = pd.Timestamp.now().floor("H")
         rows = []
         for z in ZONES:
@@ -105,27 +86,24 @@ def load_model():
 
 model = load_model()
 
-# --------------------------
-# Status Logic
-# --------------------------
-def status_label(temp):
-    if temp > 40: return "Hotspot"
-    if temp > 36: return "Medium"
-    return "Safe"
+# Determine status
+def status(temp):
+    if temp > 40: return "🔥 Hotspot"
+    if temp > 36: return "🌤 Medium"
+    return "✅ Safe"
 
-# Current snapshot
 latest = df.sort_values("timestamp").groupby("zone").last().reset_index()
-latest["status"] = latest["temp"].apply(status_label)
+latest["status"] = latest["temp"].apply(status)
 
 # --------------------------
 # Header
 # --------------------------
-st.markdown("<h1 class='center-text' style='font-size:48px;'>PrithviSense</h1>", unsafe_allow_html=True)
-st.markdown("<p class='center-text' style='font-size:20px; font-style:italic;'>Smart Thermal Awareness for Sustainable Campuses</p>", unsafe_allow_html=True)
+st.markdown("<h1 class='center-text'>PrithviSense</h1>", unsafe_allow_html=True)
+st.markdown("<p class='center-text tagline'>Smart Thermal Awareness for Sustainable Campuses</p>", unsafe_allow_html=True)
 st.write("")
 
 # --------------------------
-# Section 1: Current Status Table
+# Section 1: Current Status
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("1) Current Campus Heat & UV Status")
@@ -133,30 +111,33 @@ st.dataframe(latest[["zone","temp","uv","status"]])
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# Section 2: Zone Trends
+# Section 2: Trends
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("2) Temperature Trend by Zone")
-selected_zone = st.selectbox("Select Zone", ZONES)
-hist = df[df.zone == selected_zone].sort_values("timestamp").tail(48)
-chart = alt.Chart(hist).mark_line().encode(
+
+zone = st.selectbox("Choose Zone", ZONES)
+hist = df[df.zone == zone].sort_values("timestamp").tail(48)
+
+chart = alt.Chart(hist).mark_line(color="#2b8a6e").encode(
     x="timestamp:T",
     y="temp:Q",
     tooltip=["timestamp:T","temp"]
 ).properties(height=260)
+
 st.altair_chart(chart, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# Section 3: Forecast Box
+# Section 3: Prediction
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
-st.subheader("3) Forecast Heat & UV Conditions")
+st.subheader("3) Forecast (Model Prediction)")
 
-col1, col2, col3 = st.columns(3)
-zone_in = col1.selectbox("Zone", ZONES)
-date_in = col2.date_input("Date", datetime.now().date())
-time_in = col3.time_input("Time", (datetime.now()+timedelta(hours=1)).time())
+c1, c2, c3 = st.columns(3)
+zone_in = c1.selectbox("Zone to Forecast", ZONES)
+date_in = c2.date_input("Date", datetime.now().date())
+time_in = c3.time_input("Time", (datetime.now()+timedelta(hours=1)).time())
 
 if st.button("Predict"):
     if model:
@@ -168,34 +149,32 @@ if st.button("Predict"):
         pred = model.predict(X)[0]
         p_temp, p_uv = round(pred[0],1), round(pred[1],1)
     else:
-        p_temp = round(latest[latest.zone==zone_in].temp.values[0] + np.random.randn(),1)
-        p_uv = round(latest[latest.zone==zone_in].uv.values[0] + np.random.randn()*0.4,1)
+        base_row = latest[latest.zone==zone_in].iloc[0]
+        p_temp = round(base_row.temp + np.random.randn(),1)
+        p_uv = round(base_row.uv + np.random.randn()*0.3,1)
 
-    st.success(f"🌡 Temperature: **{p_temp}°C**   |   ☀ UV Index: **{p_uv}**")
+    st.success(f"🌡 Predicted Temperature: **{p_temp}°C**  |  ☀ Predicted UV Index: **{p_uv}**")
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
 # Section 4: ROI Calculator
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
-st.subheader("4) ROI Calculator for Heat Mitigation Actions")
+st.subheader("4) ROI Calculator")
 
-c1, c2, c3 = st.columns(3)
-cost = c1.number_input("Installation Cost (₹)", value=20000)
-saving = c2.number_input("Yearly Savings (₹)", value=5000)
-life = c3.number_input("Expected Lifetime (years)", value=5)
+colA, colB, colC = st.columns(3)
+cost = colA.number_input("Installation Cost (₹)", value=20000)
+saving = colB.number_input("Yearly Savings (₹)", value=5000)
+life = colC.number_input("Lifetime (years)", value=5)
 
 total = saving * life
-roi = ((total - cost) / cost) * 100 if cost > 0 else 0
+roi = ((total - cost)/cost)*100 if cost > 0 else 0
 
-st.info(f"Total Savings Over Lifetime: **₹{total:,}**")
-st.success(f"Estimated ROI: **{roi:.1f}%**")
+st.info(f"💰 Total Savings: **₹{total:,}**")
+st.success(f"📈 ROI: **{roi:.1f}%**")
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
 # Footer
 # --------------------------
-st.write("")
-st.markdown("<p class='center-text' style='color:#444;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
-
-
+st.markdown("<p class='center-text' style='color:#445;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
