@@ -1,4 +1,4 @@
-# streamlit_app.py (UI Clean + Proper Responsive Layout)
+# streamlit_app.py  — PRITHVISENSE (Clean White Theme)
 
 import streamlit as st
 import pandas as pd
@@ -8,165 +8,159 @@ import altair as alt
 from datetime import datetime, timedelta
 import math
 import io
-import os
 
-st.set_page_config(page_title="Chandigarh University — Thermal Digital Twin",
-                   layout="wide")
+st.set_page_config(page_title="PrithviSense", layout="wide",)
 
-# ---------------------------
-# Load Data / Model
-# ---------------------------
-DATA_FILE = "thermal_data.csv"
-MODEL_FILE = "thermal_model.joblib"
+# ---------- STYLE ----------
+st.markdown("""
+<style>
+body, .stApp {
+    background-color: #F8FAF7;
+    font-family: 'Inter', sans-serif;
+}
+h1 {
+    font-weight: 800;
+    color: #2E7D32;
+}
+h2, h3 {
+    font-weight: 600;
+    color: #2E7D32;
+}
+.card {
+    background: #FFFFFF;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #EAEAEA;
+    box-shadow: 0px 3px 12px rgba(0,0,0,0.05);
+}
+.statbox {
+    background: #F3F9F3;
+    padding: 14px;
+    border-radius: 10px;
+    text-align: center;
+    border-left: 5px solid #4CAF50;
+}
+.zonebox {
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 5px solid #4CAF50;
+    background: #FFFFFF;
+    margin-bottom: 6px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-ZONES = [
-    "Main Parking Lot", "Academic Block A", "Academic Block B",
-    "Boys Hostel 1", "Boys Hostel 2", "Girls Hostel",
-    "Sports Stadium", "Central Library", "Green Quad", "Food Court"
-]
+# ---------- DATA ----------
+ZONES = ["Main Parking Lot","Academic Block A","Academic Block B",
+         "Boys Hostel 1","Boys Hostel 2","Girls Hostel",
+         "Sports Stadium","Central Library","Green Quad","Food Court"]
 
 def load_data():
     try:
-        return pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
+        df = pd.read_csv("thermal_data.csv", parse_dates=["timestamp"])
+        return df
     except:
         return None
 
 def load_model():
     try:
-        return joblib.load(MODEL_FILE)
+        return joblib.load("thermal_model.joblib")
     except:
         return None
 
 df = load_data()
-pipeline = load_model()
+model = load_model()
 
+# Fallback sample data
 if df is None:
-    st.warning("Data file missing. Using generated demo data.")
     now = pd.Timestamp.now().floor("H")
-    rows = []
+    rows=[]
     for z in ZONES:
         for h in range(48):
             ts = now - pd.Timedelta(hours=h)
-            temp = 28 + 6*np.sin(h/24*np.pi) + np.random.normal(0,1)
-            uv = max(0, round(8*np.sin(h/24*np.pi) + np.random.normal(0,1),1))
-            rows.append({"timestamp": ts, "zone": z, "temp": temp, "uv": uv})
+            temp = 29 + np.random.normal(0,1.8)
+            uv = max(0, round(9*np.sin((ts.hour-9)/24*2*np.pi)+np.random.normal(0,0.4),1))
+            rows.append({"timestamp":ts,"zone":z,"temp":round(temp,1),"uv":uv})
     df = pd.DataFrame(rows)
 
 latest = df.sort_values("timestamp").groupby("zone").last().reset_index()
 
-def classify(temp):
-    if temp > 40: return "Hotspot"
-    if temp > 36: return "Medium"
-    return "Safe"
+def status(t):
+    return "Hotspot" if t>40 else ("Warm" if t>36 else "Comfortable")
 
-latest["status"] = latest["temp"].apply(classify)
+latest["Status"] = latest["temp"].apply(status)
 
-# ---------------------------
-# UI HEADER
-# ---------------------------
-st.markdown("""
-<style>
-body, .stApp { font-family: 'Inter', sans-serif; }
-.card {
-    padding: 14px; 
-    border-radius: 10px;
-    background: #ffffffdd;
-    border: 1px solid #e5e5e5;
-}
-.section-title { 
-    font-size: 22px; 
-    font-weight: 700; 
-    margin-bottom: 10px;
-}
-</style>
-""", unsafe_allow_html=True)
+# ---------- HEADER ----------
+st.markdown("<h1>PrithviSense</h1>", unsafe_allow_html=True)
+st.markdown("### *Smart Thermal Awareness for Sustainable Campuses*")
+st.write("")
 
-st.title("🌿 Chandigarh University — Thermal Digital Twin")
-st.caption("Real-time Monitoring • Climate Safety • Predictive Insights")
+# ---------- LIVE SNAPSHOT ----------
+left, right = st.columns([1.1,1.9], gap="large")
 
-# ---------------------------
-# LIVE SNAPSHOT
-# ---------------------------
-st.markdown("### 🔥 Live Thermal Snapshot")
-cols = st.columns(3)
+with left:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Current Zone Conditions")
+    
+    for zone in ZONES:
+        row = latest[latest.zone==zone].iloc[0]
+        st.markdown(
+            f"<div class='zonebox'><b>{zone}</b><br>Temp: {row.temp}°C · UV: {row.uv} · {row.Status}</div>",
+            unsafe_allow_html=True
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-for i, row in latest.iterrows():
-    color = "#4caf50" if row["status"]=="Safe" else "#ff9800" if row["status"]=="Medium" else "#d32f2f"
-    with cols[i % 3]:
-        st.markdown(f"""
-        <div class='card' style='border-left: 6px solid {color};'>
-        <b>{row['zone']}</b><br>
-        <span style="font-size:22px; font-weight:700; color:{color}">{row['temp']:.1f}°C</span><br>
-        UV Index: {row['uv']}<br>
-        Status: <b>{row['status']}</b>
-        </div>
-        """, unsafe_allow_html=True)
+# ---------- SIMPLE CLEAN MAP ----------
+with right:
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.subheader("Campus Overview (Simple Layout Map)")
+    st.image("cu.jpeg", caption="Chandigarh University Campus Map", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("---")
+# ---------- FORECAST ----------
+st.write("")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("Forecast Temperature")
 
-# ---------------------------
-# FORECAST
-# ---------------------------
-st.markdown("### 📈 Forecast (Model Prediction)")
-fc_col1, fc_col2 = st.columns([3,2])
+z = st.selectbox("Select Zone", ZONES)
+d = st.date_input("Date", datetime.now().date())
+t = st.time_input("Time", datetime.now().time())
 
-with fc_col1:
-    zone = st.selectbox("Select Zone", ZONES)
-    date = st.date_input("Select Date", datetime.now().date())
-    time = st.time_input("Select Time", (datetime.now()+timedelta(hours=1)).time())
-    if st.button("Run Forecast"):
-        timestamp = pd.to_datetime(f"{date} {time}")
-        hour = timestamp.hour
-        dow = timestamp.dayofweek
-        month = timestamp.month
+if st.button("Predict"):
+    ts = pd.to_datetime(f"{d} {t}")
+    hour = ts.hour; dow = ts.dayofweek; month = ts.month
 
-        if pipeline:
-            X = pd.DataFrame([{"hour":hour,"dayofweek":dow,"month":month, **{f"zone_{z}":int(z==zone) for z in ZONES}}])
-            pred = pipeline.predict(X)
-            predicted_temp = float(pred[0][0])
-        else:
-            predicted_temp = latest[latest["zone"]==zone]["temp"].values[0] + np.random.normal(0,1)
+    if model is not None:
+        X = pd.DataFrame([{ "hour":hour,"dayofweek":dow,"month":month, **{f"zone_{zn}":int(zn==z) for zn in ZONES}}])
+        p = model.predict(X)[0][0]
+    else:
+        p = latest[latest.zone==z].temp.values[0] + np.random.normal(0,1)
 
-        st.success(f"Predicted Temperature: **{predicted_temp:.2f}°C**")
+    st.success(f"Estimated Temperature: {p:.1f}°C")
 
-with fc_col2:
-    st.info("""
-    **Understanding the Prediction**
-    - Based on historical thermal trends
-    - Zone characteristics are considered
-    - Best suited for planning safe movement and outdoor events
-    """)
+    hist = df[df.zone==z].tail(48)
+    chart = alt.Chart(hist).mark_line().encode(x="timestamp:T", y="temp:Q")
+    st.altair_chart(chart, use_container_width=True)
 
-st.markdown("---")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------------
-# ROI CALCULATOR
-# ---------------------------
-st.markdown("### 💰 ROI Calculator (Major Feature)")
+# ---------- ROI CALCULATOR ----------
+st.write("")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("ROI Calculator")
 
-cost = st.number_input("Installation Cost (₹)", min_value=0, value=25000)
-saving = st.number_input("Estimated Annual Energy Saving (₹)", min_value=0, value=6000)
-years = st.number_input("System Lifetime (Years)", min_value=1, value=5)
+cost = st.number_input("Installation Cost (₹)", value=25000)
+saving = st.number_input("Estimated Yearly Saving (₹)", value=7000)
+years = st.slider("Years", 1, 10, 5)
 
-total = saving * years
-roi = ((total - cost)/cost * 100) if cost else None
+total = saving*years
+roi = ((total-cost)/cost)*100
 
-st.metric("Total Saving Over Lifetime", f"₹{int(total):,}")
-st.metric("Estimated ROI", f"{roi:.1f}%")
+st.write(f"**Total Savings:** ₹{total:,}")
+st.write(f"**ROI:** {roi:.1f}%")
 
-st.markdown("---")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------------
-# ACTIONABLE INSIGHTS
-# ---------------------------
-st.markdown("### 🎯 Actionable Insights")
-hotspots = latest[latest["status"]=="Hotspot"]["zone"].tolist()
-
-if hotspots:
-    st.error(f"⚠️ Immediate action required in: **{', '.join(hotspots)}**")
-else:
-    st.success("✅ All zones are currently safe")
-
-st.markdown("---")
-
-st.caption("Made with ❤️ at Chandigarh University")
+# ---------- FOOTER ----------
+st.write(" ")
+st.markdown("<center><i>Made with care for Chandigarh University 💚</i></center>", unsafe_allow_html=True)
