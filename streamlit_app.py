@@ -6,92 +6,98 @@ import joblib
 from datetime import datetime, timedelta
 import altair as alt
 
-# --------------------------
-# Page Settings
-# --------------------------
+# ------------------------------------------------
+# Page Config
+# ------------------------------------------------
 st.set_page_config(page_title="PrithviSense", layout="wide")
 
-# --------------------------
-# UI Styling (STREAMLIT CLOUD SAFE)
-# --------------------------
+# ------------------------------------------------
+# UI Styling (100% Streamlit Cloud compatible)
+# ------------------------------------------------
 st.markdown("""
 <style>
 
-html, body, .stApp {
+[data-testid="stAppViewContainer"] {
     background: linear-gradient(135deg, #d9f8ed, #c3e9ff, #e7ffd9);
     background-size: 300% 300%;
     animation: gradientMove 14s ease infinite;
     font-family: 'Segoe UI', sans-serif;
 }
-
-@keyframes gradientMove {
-    0% { background-position: 0% 0%; }
-    50% { background-position: 100% 100%; }
+@keyframes gradientMove { 
+    0% { background-position: 0% 0%; } 
+    50% { background-position: 100% 100%; } 
     100% { background-position: 0% 0%; }
 }
 
-/* Center heading */
+[data-testid="stHeader"] { background: transparent; }
+
+/* Center Text */
 .center-text { text-align:center; }
 
 /* Tagline */
-p.tagline { font-size:20px; font-style:italic; color:#225b44; margin-top:-12px; }
+p.tagline {
+    font-size:20px;
+    font-style:italic;
+    color:#225b44;
+    margin-top:-12px;
+}
 
-/* Card */
+/* Card Styling */
 .card {
     background: rgba(255,255,255,0.78);
     padding: 24px;
     border-radius: 14px;
-    box-shadow: 0px 6px 22px rgba(0,0,0,0.10);
-    backdrop-filter: blur(12px);
+    box-shadow: 0px 6px 22px rgba(0,0,0,0.12);
+    backdrop-filter: blur(14px);
     margin-bottom: 22px;
     transition: transform 0.28s ease, box-shadow 0.28s ease;
 }
 .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0px 10px 26px rgba(0,0,0,0.18);
+    transform: translateY(-6px);
+    box-shadow: 0px 10px 30px rgba(0,0,0,0.18);
 }
 
-/* Button hover glow */
-.stButton>button {
-    border-radius: 8px;
-    background: #1b7057 !important;
-    color: white;
-    font-weight: 600;
-    border: none;
+/* Buttons */
+button[kind="primary"] {
+    background-color: #1b7057 !important;
+    border-radius: 8px !important;
+    color: white !important;
+    font-weight: 600 !important;
 }
-.stButton>button:hover {
-    background: #145843 !important;
-    box-shadow: 0 0 12px rgba(27,112,87,0.6);
+button[kind="primary"]:hover {
+    background-color: #145843 !important;
+    box-shadow: 0 0 14px rgba(27,112,87,0.6) !important;
     transform: translateY(-2px);
 }
 
-/* Table hover highlight */
+/* Table Hover */
 tbody tr:hover {
-    background-color: #e6fff5 !important;
+    background: #eafff5 !important;
     cursor: pointer;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# --------------------------
+# ------------------------------------------------
 # Data Load
-# --------------------------
+# ------------------------------------------------
 DATA_FILE = "thermal_data.csv"
 MODEL_FILE = "thermal_model.joblib"
 
 ZONES = [
-    "Main Parking Lot", "Academic Block A", "Academic Block B",
-    "Boys Hostel 1", "Boys Hostel 2", "Girls Hostel",
-    "Sports Stadium", "Central Library", "Green Quad", "Food Court"
+    "Main Parking Lot","Academic Block A","Academic Block B",
+    "Boys Hostel 1","Boys Hostel 2","Girls Hostel",
+    "Sports Stadium","Central Library","Green Quad","Food Court"
 ]
 
 def load_data():
     try:
         return pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
     except:
+        # Generate demo data
         now = pd.Timestamp.now().floor("H")
-        rows = []
+        rows=[]
         for z in ZONES:
             for h in range(48):
                 ts = now - pd.Timedelta(hours=h)
@@ -103,10 +109,9 @@ def load_data():
 df = load_data()
 
 def load_model():
-    try:
-        return joblib.load(MODEL_FILE)
-    except:
-        return None
+    try: return joblib.load(MODEL_FILE)
+    except: return None
+
 model = load_model()
 
 def status(temp):
@@ -117,24 +122,24 @@ def status(temp):
 latest = df.sort_values("timestamp").groupby("zone").last().reset_index()
 latest["status"] = latest["temp"].apply(status)
 
-# --------------------------
+# ------------------------------------------------
 # Header
-# --------------------------
+# ------------------------------------------------
 st.markdown("<h1 class='center-text'>PrithviSense</h1>", unsafe_allow_html=True)
 st.markdown("<p class='center-text tagline'>Smart Thermal Awareness for Sustainable Campuses</p>", unsafe_allow_html=True)
 st.write("")
 
-# --------------------------
+# ------------------------------------------------
 # 1) Current Status
-# --------------------------
+# ------------------------------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("1) Current Campus Heat & UV Status")
 st.dataframe(latest[["zone","temp","uv","status"]], use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --------------------------
-# 2) Temperature Trend
-# --------------------------
+# ------------------------------------------------
+# 2) Trends
+# ------------------------------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("2) Temperature Trend by Zone")
 
@@ -142,24 +147,23 @@ zone = st.selectbox("Choose Zone", ZONES)
 hist = df[df.zone == zone].sort_values("timestamp").tail(48)
 
 chart = alt.Chart(hist).mark_line(color="#1b7057", strokeWidth=2).encode(
-    x="timestamp:T",
-    y="temp:Q",
+    x="timestamp:T", y="temp:Q",
     tooltip=["timestamp:T","temp"]
 ).properties(height=260)
 
 st.altair_chart(chart, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --------------------------
+# ------------------------------------------------
 # 3) Forecast
-# --------------------------
+# ------------------------------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("3) Forecast (Model Prediction)")
 
 c1, c2, c3 = st.columns(3)
 zone_in = c1.selectbox("Zone to Forecast", ZONES)
 date_in = c2.date_input("Date", datetime.now().date())
-time_in = c3.time_input("Time", (datetime.now()+timedelta(hours=1)).time())
+time_in = c3.time_input("Time", datetime.now().time())
 
 if st.button("Predict"):
     if model:
@@ -168,25 +172,25 @@ if st.button("Predict"):
             "hour": ts.hour, "dayofweek": ts.dayofweek, "month": ts.month,
             **{f"zone_{z}": int(z==zone_in) for z in ZONES}
         }])
-        pred = model.predict(X)[0]
-        temp_pred, uv_pred = round(pred[0],1), round(pred[1],1)
+        p_temp, p_uv = model.predict(X)[0]
+        p_temp, p_uv = round(p_temp,1), round(p_uv,1)
     else:
         base = latest[latest.zone==zone_in].iloc[0]
-        temp_pred = round(base.temp + np.random.randn(),1)
-        uv_pred = round(base.uv + np.random.randn()*0.3,1)
+        p_temp = round(base.temp + np.random.randn(),1)
+        p_uv = round(base.uv + np.random.randn()*0.4,1)
 
-    st.success(f"🌡 Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
-    
-    if uv_pred <= 2.5:
-        st.success("✅ UV Safe — Outdoor activities okay")
+    st.success(f"🌡 Temperature: **{p_temp}°C**  |  ☀ UV Index: **{p_uv}**")
+
+    if p_uv <= 2.5:
+        st.success("✅ UV Safe — Outdoor activities are okay.")
     else:
-        st.error("⚠ UV High — Avoid direct sunlight & stay hydrated")
+        st.error("⚠ UV High — Limit sunlight, stay hydrated, seek shade.")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --------------------------
+# ------------------------------------------------
 # 4) ROI Calculator
-# --------------------------
+# ------------------------------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("4) ROI Calculator")
 
@@ -202,7 +206,7 @@ st.info(f"💰 Total Savings: **₹{total:,}**")
 st.success(f"📈 ROI: **{roi:.1f}%**")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# --------------------------
+# ------------------------------------------------
 # Footer
-# --------------------------
+# ------------------------------------------------
 st.markdown("<p class='center-text' style='color:#445;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
