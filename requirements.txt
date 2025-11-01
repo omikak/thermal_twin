@@ -4,3 +4,4 @@ numpy
 joblib
 altair
 scikit-learn
+Pillow
