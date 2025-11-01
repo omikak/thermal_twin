@@ -3,73 +3,44 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import altair as alt
 from datetime import datetime, timedelta
+import altair as alt
 import math
 import io
 
-st.set_page_config(page_title="PrithviSense — Thermal Digital Twin", layout="wide")
+# --------------------------
+# Page Settings
+# --------------------------
+st.set_page_config(page_title="PrithviSense", layout="wide")
 
-# ---------------------- GLOBAL STYLE ----------------------
+# --------------------------
+# Background Style
+# --------------------------
 st.markdown("""
 <style>
 body {
-    background-image: url("https://www.cuchd.in/assets/images/cu-bg.jpg");
+    background: url('https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1600&q=80') no-repeat center center fixed;
     background-size: cover;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    backdrop-filter: blur(6px);
 }
-
-/* Glass card design */
+.reportview-container .main .block-container {
+    backdrop-filter: blur(14px) brightness(1.15);
+    padding-top: 10px;
+}
 .card {
-    background: rgba(255,255,255,0.78);
-    border-radius: 14px;
+    background: rgba(255,255,255,0.82);
     padding: 20px;
-    box-shadow: 0 6px 22px rgba(0,0,0,0.10);
-    backdrop-filter: blur(8px);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
-
-/* Center heading */
-h1 {
+.center-text {
     text-align: center;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-}
-
-/* Subtle italic tagline */
-.tagline {
-    text-align: center;
-    font-style: italic;
-    font-size: 16px;
-    margin-top: -6px;
-    margin-bottom: 20px;
-    color: #2E7D32;
-}
-
-/* Neat box sections */
-.box {
-    padding: 16px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid #e5e5e5;
-    margin-bottom: 12px;
-}
-
-/* Table serial number alignment */
-.table-number {
-    text-align: center;
-    font-weight: 600;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------- HEADER ----------------------
-st.write("<h1>🌿 PrithviSense</h1>", unsafe_allow_html=True)
-st.write("<div class='tagline'>Smart Thermal Awareness for Sustainable Campuses</div>", unsafe_allow_html=True)
-st.write("---")
-
-# ---------------------- DATA LOADING ----------------------
+# --------------------------
+# Constants
+# --------------------------
 DATA_FILE = "thermal_data.csv"
 MODEL_FILE = "thermal_model.joblib"
 
@@ -79,62 +50,124 @@ ZONES = [
     "Sports Stadium", "Central Library", "Green Quad", "Food Court"
 ]
 
-def load_dataset():
+# --------------------------
+# Load Data or Generate Demo
+# --------------------------
+def load_data():
     try:
-        return pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
+        df = pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
+        return df
+    except:
+        # Generate sample data for UI
+        now = pd.Timestamp.now().floor("H")
+        rows = []
+        for z in ZONES:
+            for h in range(48):
+                ts = now - pd.Timedelta(hours=h)
+                temp = round(28 + np.sin(h/3)*5 + np.random.randn()*0.7, 1)
+                uv = round(max(0, np.sin(h/4)*8 + np.random.randn()*0.4), 1)
+                rows.append([ts, z, temp, uv])
+        return pd.DataFrame(rows, columns=["timestamp","zone","temp","uv"])
+
+df = load_data()
+
+def load_model():
+    try:
+        return joblib.load(MODEL_FILE)
     except:
         return None
 
-df = load_dataset()
-if df is None:
-    # safe fallback mock
-    now = datetime.now()
-    rows=[]
-    for z in ZONES:
-        for h in range(24):
-            rows.append([now - timedelta(hours=h), z, round(28+np.random.normal(),1), round(np.random.uniform(2,8),1)])
-    df = pd.DataFrame(rows, columns=["timestamp","zone","temp","uv"])
+model = load_model()
 
+# --------------------------
+# Status Logic
+# --------------------------
+def status_label(temp):
+    if temp > 40: return "Hotspot"
+    if temp > 36: return "Medium"
+    return "Safe"
+
+# Current snapshot
 latest = df.sort_values("timestamp").groupby("zone").last().reset_index()
-latest.insert(0, "S.No", range(1, len(latest)+1))
+latest["status"] = latest["temp"].apply(status_label)
 
-# ---------------------- CURRENT CAMPUS STATUS ----------------------
-st.subheader("📍 Current Campus Status")
-st.write("<div class='card'>", unsafe_allow_html=True)
-st.dataframe(latest[["S.No","zone","temp","uv"]], use_container_width=True)
-st.write("</div>", unsafe_allow_html=True)
+# --------------------------
+# Header
+# --------------------------
+st.markdown("<h1 class='center-text' style='font-size:48px;'>PrithviSense</h1>", unsafe_allow_html=True)
+st.markdown("<p class='center-text' style='font-size:20px; font-style:italic;'>Smart Thermal Awareness for Sustainable Campuses</p>", unsafe_allow_html=True)
+st.write("")
 
-# ---------------------- FORECAST SECTION ----------------------
-st.subheader("🔮 Forecast Temperature")
-st.write("<div class='card'>", unsafe_allow_html=True)
+# --------------------------
+# Section 1: Current Status Table
+# --------------------------
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("1) Current Campus Heat & UV Status")
+st.dataframe(latest[["zone","temp","uv","status"]])
+st.markdown("</div>", unsafe_allow_html=True)
 
-zone = st.selectbox("Select Zone:", ZONES, index=0)
-date = st.date_input("Select Date:", datetime.now().date())
-time = st.time_input("Select Time:", datetime.now().time())
+# --------------------------
+# Section 2: Zone Trends
+# --------------------------
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("2) Temperature Trend by Zone")
+selected_zone = st.selectbox("Select Zone", ZONES)
+hist = df[df.zone == selected_zone].sort_values("timestamp").tail(48)
+chart = alt.Chart(hist).mark_line().encode(
+    x="timestamp:T",
+    y="temp:Q",
+    tooltip=["timestamp:T","temp"]
+).properties(height=260)
+st.altair_chart(chart, use_container_width=True)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# --------------------------
+# Section 3: Forecast Box
+# --------------------------
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("3) Forecast Heat & UV Conditions")
+
+col1, col2, col3 = st.columns(3)
+zone_in = col1.selectbox("Zone", ZONES)
+date_in = col2.date_input("Date", datetime.now().date())
+time_in = col3.time_input("Time", (datetime.now()+timedelta(hours=1)).time())
 
 if st.button("Predict"):
-    base = latest[latest.zone==zone]["temp"].values[0]
-    pred = base + np.random.normal(0,1)
+    if model:
+        ts = pd.to_datetime(f"{date_in} {time_in}")
+        X = pd.DataFrame([{
+            "hour": ts.hour, "dayofweek": ts.dayofweek, "month": ts.month,
+            **{f"zone_{z}": int(z==zone_in) for z in ZONES}
+        }])
+        pred = model.predict(X)[0]
+        p_temp, p_uv = round(pred[0],1), round(pred[1],1)
+    else:
+        p_temp = round(latest[latest.zone==zone_in].temp.values[0] + np.random.randn(),1)
+        p_uv = round(latest[latest.zone==zone_in].uv.values[0] + np.random.randn()*0.4,1)
 
-    st.success(f"🌡️ Predicted Temperature for **{zone}**: **{pred:.1f}°C**")
+    st.success(f"🌡 Temperature: **{p_temp}°C**   |   ☀ UV Index: **{p_uv}**")
+st.markdown("</div>", unsafe_allow_html=True)
 
-st.write("</div>", unsafe_allow_html=True)
+# --------------------------
+# Section 4: ROI Calculator
+# --------------------------
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("4) ROI Calculator for Heat Mitigation Actions")
 
-# ---------------------- ROI CALCULATOR ----------------------
-st.subheader("💰 ROI Calculator")
-st.write("<div class='card'>", unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+cost = c1.number_input("Installation Cost (₹)", value=20000)
+saving = c2.number_input("Yearly Savings (₹)", value=5000)
+life = c3.number_input("Expected Lifetime (years)", value=5)
 
-cost = st.number_input("Installation Cost (₹)", value=25000)
-saving = st.number_input("Yearly Savings (₹)", value=6000)
-years = st.number_input("Lifetime (Years)", value=5)
-
-total = saving * years
-roi = ((total - cost) / cost * 100)
+total = saving * life
+roi = ((total - cost) / cost) * 100 if cost > 0 else 0
 
 st.info(f"Total Savings Over Lifetime: **₹{total:,}**")
 st.success(f"Estimated ROI: **{roi:.1f}%**")
+st.markdown("</div>", unsafe_allow_html=True)
 
-st.write("</div>", unsafe_allow_html=True)
-
-# ---------------------- FOOTER ----------------------
-st.write("<center>Made with 💚 for Chandigarh University Hackathon</center>", unsafe_allow_html=True)
+# --------------------------
+# Footer
+# --------------------------
+st.write("")
+st.markdown("<p class='center-text' style='color:#444;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
