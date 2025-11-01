@@ -5,8 +5,6 @@ import numpy as np
 import joblib
 from datetime import datetime, timedelta
 import altair as alt
-import math
-import io
 
 # --------------------------
 # Page Settings
@@ -19,33 +17,42 @@ st.set_page_config(page_title="PrithviSense", layout="wide")
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(135deg, #e8f7f0, #cfeee3) !important;
+    background: linear-gradient(135deg, #d9f8ed, #c3e9ff, #e7ffd9);
     background-attachment: fixed;
+    background-size: 300% 300%;
+    animation: gradientMove 14s ease infinite;
     font-family: 'Segoe UI', sans-serif;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
 }
 
 /* Center heading */
 .center-text { text-align:center; }
 
-/* Card UI */
+/* Tagline */
+p.tagline { font-size:20px; font-style:italic; color:#225b44; margin-top:-12px; }
+
+/* Card */
 .card {
-    background: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.78);
     padding: 24px;
     border-radius: 14px;
-    box-shadow: 0px 4px 18px rgba(0,0,0,0.08);
-    margin-bottom: 18px;
+    box-shadow: 0px 6px 22px rgba(0,0,0,0.10);
     backdrop-filter: blur(12px);
+    margin-bottom: 22px;
+    transition: 0.28s ease;
 }
-
-/* Subtle hover lift */
-.card:hover { transform: translateY(-3px); transition: 0.25s ease; }
+.card:hover { transform: translateY(-4px); }
 
 /* Buttons */
-.stButton>button { border-radius: 8px; font-weight:600; }
+.stButton>button { border-radius: 8px; font-weight:600; padding:6px 16px; }
 
-/* Header text spacing */
-h1 { font-size: 48px; margin-bottom: 4px; }
-p.tagline { font-size:20px; font-style:italic; color:#3b6652; margin-top:-10px; }
+/* Table font */
+.dataframe { font-size: 14px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -63,16 +70,15 @@ ZONES = [
 
 def load_data():
     try:
-        df = pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
-        return df
+        return pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
     except:
         now = pd.Timestamp.now().floor("H")
         rows = []
         for z in ZONES:
             for h in range(48):
                 ts = now - pd.Timedelta(hours=h)
-                temp = round(28 + np.sin(h/3)*5 + np.random.randn()*0.7, 1)
-                uv = round(max(0, np.sin(h/4)*8 + np.random.randn()*0.4), 1)
+                temp = round(28 + np.sin(h/4)*4 + np.random.randn()*0.5, 1)
+                uv = round(max(0, np.sin(h/4)*7 + np.random.randn()*0.3), 1)
                 rows.append([ts, z, temp, uv])
         return pd.DataFrame(rows, columns=["timestamp","zone","temp","uv"])
 
@@ -83,7 +89,6 @@ def load_model():
         return joblib.load(MODEL_FILE)
     except:
         return None
-
 model = load_model()
 
 # Determine status
@@ -103,15 +108,15 @@ st.markdown("<p class='center-text tagline'>Smart Thermal Awareness for Sustaina
 st.write("")
 
 # --------------------------
-# Section 1: Current Status
+# 1) Current Status
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("1) Current Campus Heat & UV Status")
-st.dataframe(latest[["zone","temp","uv","status"]])
+st.dataframe(latest[["zone","temp","uv","status"]], use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# Section 2: Trends
+# 2) Trends
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("2) Temperature Trend by Zone")
@@ -119,7 +124,7 @@ st.subheader("2) Temperature Trend by Zone")
 zone = st.selectbox("Choose Zone", ZONES)
 hist = df[df.zone == zone].sort_values("timestamp").tail(48)
 
-chart = alt.Chart(hist).mark_line(color="#2b8a6e").encode(
+chart = alt.Chart(hist).mark_line(color="#1b7057", strokeWidth=2).encode(
     x="timestamp:T",
     y="temp:Q",
     tooltip=["timestamp:T","temp"]
@@ -129,7 +134,7 @@ st.altair_chart(chart, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# Section 3: Prediction
+# 3) Prediction
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("3) Forecast (Model Prediction)")
@@ -147,17 +152,17 @@ if st.button("Predict"):
             **{f"zone_{z}": int(z==zone_in) for z in ZONES}
         }])
         pred = model.predict(X)[0]
-        p_temp, p_uv = round(pred[0],1), round(pred[1],1)
+        temp_pred, uv_pred = round(pred[0],1), round(pred[1],1)
     else:
-        base_row = latest[latest.zone==zone_in].iloc[0]
-        p_temp = round(base_row.temp + np.random.randn(),1)
-        p_uv = round(base_row.uv + np.random.randn()*0.3,1)
+        base = latest[latest.zone==zone_in].iloc[0]
+        temp_pred = round(base.temp + np.random.randn(),1)
+        uv_pred = round(base.uv + np.random.randn()*0.3,1)
 
-    st.success(f"🌡 Predicted Temperature: **{p_temp}°C**  |  ☀ Predicted UV Index: **{p_uv}**")
+    st.success(f"🌡 Predicted Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# Section 4: ROI Calculator
+# 4) ROI Calculator
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("4) ROI Calculator")
@@ -168,7 +173,7 @@ saving = colB.number_input("Yearly Savings (₹)", value=5000)
 life = colC.number_input("Lifetime (years)", value=5)
 
 total = saving * life
-roi = ((total - cost)/cost)*100 if cost > 0 else 0
+roi = ((total - cost) / cost) * 100 if cost > 0 else 0
 
 st.info(f"💰 Total Savings: **₹{total:,}**")
 st.success(f"📈 ROI: **{roi:.1f}%**")
