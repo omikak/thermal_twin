@@ -12,13 +12,13 @@ import altair as alt
 st.set_page_config(page_title="PrithviSense", layout="wide")
 
 # --------------------------
-# UI Styling (with hover effects)
+# UI Styling (STREAMLIT CLOUD SAFE)
 # --------------------------
 st.markdown("""
 <style>
-.stApp {
+
+html, body, .stApp {
     background: linear-gradient(135deg, #d9f8ed, #c3e9ff, #e7ffd9);
-    background-attachment: fixed;
     background-size: 300% 300%;
     animation: gradientMove 14s ease infinite;
     font-family: 'Segoe UI', sans-serif;
@@ -36,35 +36,41 @@ st.markdown("""
 /* Tagline */
 p.tagline { font-size:20px; font-style:italic; color:#225b44; margin-top:-12px; }
 
-/* Card UI */
+/* Card */
 .card {
-    background: rgba(255,255,255,0.80);
+    background: rgba(255,255,255,0.78);
     padding: 24px;
     border-radius: 14px;
-    box-shadow: 0px 6px 20px rgba(0,0,0,0.10);
+    box-shadow: 0px 6px 22px rgba(0,0,0,0.10);
     backdrop-filter: blur(12px);
     margin-bottom: 22px;
-    transition: 0.3s ease;
+    transition: transform 0.28s ease, box-shadow 0.28s ease;
 }
-.card:hover { transform: translateY(-5px) scale(1.01); }
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 10px 26px rgba(0,0,0,0.18);
+}
 
-/* Buttons */
+/* Button hover glow */
 .stButton>button {
     border-radius: 8px;
-    font-weight:600;
-    padding:6px 16px;
-    transition:0.25s;
+    background: #1b7057 !important;
+    color: white;
+    font-weight: 600;
+    border: none;
 }
 .stButton>button:hover {
-    box-shadow: 0px 0px 10px rgba(0,0,0,0.3);
+    background: #145843 !important;
+    box-shadow: 0 0 12px rgba(27,112,87,0.6);
     transform: translateY(-2px);
 }
 
 /* Table hover highlight */
-.dataframe tbody tr:hover {
-    background-color: #e7f5ef !important;
+tbody tr:hover {
+    background-color: #e6fff5 !important;
     cursor: pointer;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -103,7 +109,6 @@ def load_model():
         return None
 model = load_model()
 
-# Determine status
 def status(temp):
     if temp > 40: return "🔥 Hotspot"
     if temp > 36: return "🌤 Medium"
@@ -128,7 +133,7 @@ st.dataframe(latest[["zone","temp","uv","status"]], use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# 2) Trends
+# 2) Temperature Trend
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("2) Temperature Trend by Zone")
@@ -146,7 +151,7 @@ st.altair_chart(chart, use_container_width=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # --------------------------
-# 3) Prediction
+# 3) Forecast
 # --------------------------
 st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("3) Forecast (Model Prediction)")
@@ -171,12 +176,11 @@ if st.button("Predict"):
         uv_pred = round(base.uv + np.random.randn()*0.3,1)
 
     st.success(f"🌡 Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
-
-    # UV Safety Message
+    
     if uv_pred <= 2.5:
-        st.success("✅ UV Level Safe — Outdoor activities are okay.")
+        st.success("✅ UV Safe — Outdoor activities okay")
     else:
-        st.error("⚠ UV Level High — Avoid direct sunlight, stay shaded, hydrate well.")
+        st.error("⚠ UV High — Avoid direct sunlight & stay hydrated")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
