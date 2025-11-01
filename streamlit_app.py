@@ -158,8 +158,19 @@ if st.button("Predict"):
         temp_pred = round(base.temp + np.random.randn(),1)
         uv_pred = round(base.uv + np.random.randn()*0.3,1)
 
-    st.success(f"🌡 Predicted Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
+    # Show predicted values
+    st.success(f"🌡 Temperature: **{temp_pred}°C**   |   ☀ UV Index: **{uv_pred}**")
+
+    # --------------------------
+    # UV SAFETY ALERT
+    # --------------------------
+    if uv_pred <= 2.5:
+        st.success("✅ UV Level Safe — Outdoor activities are okay.")
+    else:
+        st.error("⚠ UV Level High — Avoid direct sunlight, stay shaded, hydrate well.")
+
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 # --------------------------
 # 4) ROI Calculator
@@ -183,3 +194,4 @@ st.markdown("</div>", unsafe_allow_html=True)
 # Footer
 # --------------------------
 st.markdown("<p class='center-text' style='color:#445;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
+
