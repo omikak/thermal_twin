@@ -19,7 +19,7 @@ st.set_page_config(page_title="PrithviSense", layout="wide")
 st.markdown("""
 <style>
 body {
-    background: url('https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=1600&q=80') no-repeat center center fixed;
+    background: url('campus_map.jpg') no-repeat center center fixed;
     background-size: cover;
 }
 .reportview-container .main .block-container {
@@ -171,3 +171,4 @@ st.markdown("</div>", unsafe_allow_html=True)
 # --------------------------
 st.write("")
 st.markdown("<p class='center-text' style='color:#444;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
+
