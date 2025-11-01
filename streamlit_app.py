@@ -18,25 +18,51 @@ st.set_page_config(page_title="PrithviSense", layout="wide")
 # --------------------------
 st.markdown("""
 <style>
+:root{
+  --sea1: #e9f5f1;
+  --sea2: #d2efe6;
+  --card-bg: rgba(255,255,255,0.82);
+}
+
+/* ----- Page Background (Sea Green Gradient) ----- */
 body {
-    background: url('campus_map.jpg') no-repeat center center fixed;
+    background: linear-gradient(135deg, var(--sea1), var(--sea2)) fixed !important;
     background-size: cover;
+    margin: 0;
 }
+
+/* Subtle frosted effect to center content */
 .reportview-container .main .block-container {
-    backdrop-filter: blur(14px) brightness(1.15);
-    padding-top: 10px;
+    backdrop-filter: blur(10px) brightness(1.08);
+    padding-top: 12px;
 }
+
+/* ----- Card Styling (Clean + Soft) ----- */
 .card {
-    background: rgba(255,255,255,0.82);
-    padding: 20px;
+    background: var(--card-bg);
+    padding: 22px;
     border-radius: 14px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.09);
+    transition: 0.3s ease;
 }
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+}
+
+/* Center text utility */
 .center-text {
     text-align: center;
 }
+
+/* Smooth headings */
+h1, h2, h3, .stSubheader {
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 0.4px;
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 # --------------------------
 # Constants
@@ -171,4 +197,5 @@ st.markdown("</div>", unsafe_allow_html=True)
 # --------------------------
 st.write("")
 st.markdown("<p class='center-text' style='color:#444;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
+
 
