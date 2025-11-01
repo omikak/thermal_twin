@@ -34,6 +34,16 @@ st.markdown("""
 /* Center Text */
 .center-text { text-align:center; }
 
+/* Bigger Project Title */
+h1.center-text {
+    font-size: 64px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px;
+    color: #134b39;
+    text-shadow: 0px 3px 10px rgba(0,0,0,0.18);
+}
+
+
 /* Tagline */
 p.tagline {
     font-size:20px;
@@ -210,3 +220,4 @@ st.markdown("</div>", unsafe_allow_html=True)
 # Footer
 # ------------------------------------------------
 st.markdown("<p class='center-text' style='color:#445;'>Made with ❤️ for Hackathons</p>", unsafe_allow_html=True)
+
